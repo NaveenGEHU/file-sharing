@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileShare AI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      text-align: center;
+      padding: 60px 20px 20px;
+    }
+    header h1 {
+      font-size: 3rem;
+      margin: 0;
+      font-weight: bold;
+    }
+    header p {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      opacity: 0.9;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .upload-box {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(12px);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 480px;
+    }
+    .upload-box h2 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+    input[type="file"] {
+      display: block;
+      margin: 20px auto;
+      font-size: 1rem;
+      color: #000;
+      background: #fff;
+      padding: 5px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button {
+      padding: 12px 25px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #fff;
+      color: #4facfe;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #f0f0f0;
+    }
+    .result-box {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 12px;
+      text-align: left;
+    }
+    .result-box a {
+      color: #fff;
+      font-weight: bold;
+      word-wrap: break-word;
+    }
+    .error-msg {
+      margin-top: 15px;
+      font-weight: bold;
+      color: yellow;
+    }
+    .ai-section {
+      margin-top: 20px;
+      background: rgba(255,255,255,0.15);
+      padding: 15px;
+      border-radius: 12px;
+    }
+    .ai-section h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+    .chat-box {
+      margin-top: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .chat-box input {
+      width: 75%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      margin-right: 5px;
+    }
+    .chat-box button {
+      padding: 8px 12px;
+      background-color: #fff;
+      color: #4facfe;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ROHIT AI</h1>
+    <p>Upload and share files instantly. Links expire in 15 minutes.</p>
+  </header>
+  <main>
+    <div class="upload-box">
+      <h2>Upload Your File</h2>
+      <form method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload & Get Link</button>
+      </form>
+      <p style="margin-top: 15px; font-size: 0.95rem;">Max file size: 25 MB</p>
+
+      {% if error %}
+        <p class="error-msg">{{ error }}</p>
+      {% endif %}
+
+      {% if link %}
+        <div class="result-box">
+          <p><strong>✅ Upload successful!</strong></p>
+          <p>This link will expire in 15 minutes:</p>
+          <p><a href="{{ link }}" target="_blank">{{ link }}</a></p>
+        </div>
+
+        {% if suggested_filename %}
+        <div class="ai-section">
+          <h3>🧠 AI Suggested Filename:</h3>
+          <p><strong>{{ suggested_filename }}</strong></p>
+        </div>
+        {% endif %}
+
+        {% if description %}
+        <div class="ai-section">
+          <h3>📝 AI File Summary:</h3>
+          <p>{{ description }}</p>
+        </div>
+        {% endif %}
+
+        <div class="ai-section">
+          <h3>💬 Chat with AI About Your File</h3>
+          <div class="chat-box">
+            <input type="text" id="userInput" placeholder="Ask something about your file...">
+            <button onclick="sendQuestion()">Ask</button>
+            <div id="chatResponse" style="margin-top:10px; font-style:italic;"></div>
+          </div>
+        </div>
+
+      {% endif %}
+    </div>
+  </main>
+  <footer>
+    <p>© 2025 FileShare AI — powered by OpenAI</p>
+  </footer>
+
+  <script>
+    async function sendQuestion() {
+      const question = document.getElementById("userInput").value.trim();
+      const responseBox = document.getElementById("chatResponse");
+      if (!question) return;
+
+      responseBox.textContent = "Thinking...";
+      try {
+        const res = await fetch("/ask_ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        responseBox.textContent = data.answer || "No response from AI.";
+      } catch (err) {
+        responseBox.textContent = "Error contacting AI.";
+      }
+    }
+  </script>
+</body>
+</html>
