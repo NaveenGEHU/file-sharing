@@ -4,9 +4,9 @@ import string
 import time
 import threading
 from flask import Flask, request, send_file, render_template, jsonify
-import openai
+import google.generativeai as genai
 from PyPDF2 import PdfReader
-import magic 
+import magic
 
 app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
@@ -14,7 +14,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024 
 LINK_EXPIRY = 15 * 60 
 
-openai.api_key = "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"
+
+
+
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "AIzaSyCKReLexlYplY90YkEhFM2sAg8eRP6A3SU"))
 
 file_links = {}
 
@@ -45,15 +49,13 @@ def describe_file(filepath):
         if not text:
             return "No readable text found in this file."
 
-        text = text[:4000] 
+        text = text[:4000]
         prompt = f"Summarize this document in 3-5 sentences:\n\n{text}"
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-        )
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt)
 
-        return response.choices[0].message['content'].strip()
+        return response.text.strip()
 
     except Exception as e:
         return f"Could not generate description: {e}"
@@ -69,12 +71,10 @@ def suggest_filename(filepath):
         text = text[:1000]
         prompt = f"Based on the following content, suggest a short and descriptive filename:\n\n{text}"
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-        )
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt)
 
-        return response.choices[0].message['content'].strip()
+        return response.text.strip()
     except Exception:
         return None
 
@@ -108,6 +108,7 @@ def upload():
 
         filename = file.filename
         filepath = os.path.join(UPLOAD_FOLDER, filename)
+        filepath = os.path.abspath(filepath)
         file.save(filepath)
 
         if detect_file_type(filepath):
@@ -143,7 +144,14 @@ def download(random_id):
     file_info = file_links.get(random_id)
     if not file_info:
         return "Invalid or expired link", 404
-    return send_file(file_info["path"], as_attachment=True)
+    filepath = file_info["path"]
+    if not os.path.exists(filepath):
+        del file_links[random_id]
+        return "File not found or expired", 404
+    try:
+        return send_file(filepath, as_attachment=True)
+    except Exception as e:
+        return f"Error downloading file: {e}", 500
 
 
 @app.route("/ask_ai", methods=["POST"])
@@ -162,17 +170,11 @@ def ask_ai():
     context_text = last_file.get("text", "")
 
     try:
-        messages = [
-            {"role": "system", "content": "You are an assistant helping users understand their uploaded document."},
-            {"role": "user", "content": f"Here’s the file content:\n\n{context_text[:3000]}"},
-            {"role": "user", "content": question}
-        ]
+        prompt = f"You are an assistant helping users understand their uploaded document. Here’s the file content:\n\n{context_text[:3000]}\n\nQuestion: {question}"
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=messages,
-        )
-        answer = response.choices[0].message['content'].strip()
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt)
+        answer = response.text.strip()
         return jsonify({"answer": answer})
 
     except Exception as e:
