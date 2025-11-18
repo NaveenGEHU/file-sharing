@@ -18,7 +18,7 @@ LINK_EXPIRY = 15 * 60
 
 
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "AIzaSyCKReLexlYplY90YkEhFM2sAg8eRP6A3SU"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "apikeyhere"))
 
 file_links = {}
 
