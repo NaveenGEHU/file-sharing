@@ -1,0 +1,1 @@
+Flask>=2.0\ngoogle-generative-ai\nPyPDF2>=3.0\npython-magic>=0.4\nqrcode>=7.3\nPillow>=9.0\npython-dotenv>=0.21\ngunicorn>=20.1\n\n# Note: Adjust versions as needed. On Windows, consider using python-magic-bin instead of python-magic.
