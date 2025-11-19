@@ -17,7 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 LINK_EXPIRY = 15 * 60
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "AIzaSyCKReLexlYplY90YkEhFM2sAg8eRP6A3SU"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY", ""))
 
 file_links = {}
 
