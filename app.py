@@ -3,22 +3,21 @@ import random
 import string
 import time
 import threading
-from flask import Flask, request, send_file, render_template, jsonify
+from flask import Flask, request, send_file, render_template, jsonify, redirect, send_from_directory
 import google.generativeai as genai
 from PyPDF2 import PdfReader
 import magic
+import qrcode
+
 
 app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024 
-LINK_EXPIRY = 15 * 60 
+app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+LINK_EXPIRY = 15 * 60
 
-
-
-
-
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "apikeyhere"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY", "AIzaSyCKReLexlYplY90YkEhFM2sAg8eRP6A3SU"))
 
 file_links = {}
 
@@ -61,22 +60,7 @@ def describe_file(filepath):
         return f"Could not generate description: {e}"
 
 
-def suggest_filename(filepath):
-    """Suggest a better filename based on the file's content"""
-    try:
-        text = extract_text_from_file(filepath)
-        if not text:
-            return None
 
-        text = text[:1000]
-        prompt = f"Based on the following content, suggest a short and descriptive filename:\n\n{text}"
-
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(prompt)
-
-        return response.text.strip()
-    except Exception:
-        return None
 
 
 def detect_file_type(filepath):
@@ -89,6 +73,9 @@ def detect_file_type(filepath):
         return False
     except Exception:
         return False
+
+
+
 
 @app.errorhandler(413)
 def file_too_large(e):
@@ -111,47 +98,57 @@ def upload():
         filepath = os.path.abspath(filepath)
         file.save(filepath)
 
-        if detect_file_type(filepath):
-            os.remove(filepath)
-            return render_template("index.html", link=None, error="Malicious or unsupported file detected.")
+        # File type check removed - allow any file type
 
         # 🧠 AI Summaries & Suggestions
         ai_description = describe_file(filepath)
-        suggested_filename = suggest_filename(filepath)
 
         random_id = generate_random_string()
         file_text = extract_text_from_file(filepath)
+        share_link = request.host_url + random_id
+
+        # Generate QR code
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(share_link)
+        qr.make(fit=True)
+        img = qr.make_image(fill='black', back_color='white')
+        qr_path = os.path.join(UPLOAD_FOLDER, f"{random_id}.png")
+        img.save(qr_path)
+
         file_links[random_id] = {
-            "path": filepath,
+            "filepath": filepath,
+            "qr_path": qr_path,
             "time": time.time(),
             "text": file_text
         }
 
-        share_link = request.host_url + random_id
+        qr_code_url = f"/uploads/{random_id}.png"
 
         return render_template("index.html",
                                link=share_link,
+                               qr_code_url=qr_code_url,
                                error=None,
-                               description=ai_description,
-                               suggested_filename=suggested_filename)
+                               description=ai_description)
 
     return render_template("index.html", link=None, error=None)
 
 
 @app.route("/<random_id>")
 def download(random_id):
-    """Serve file if link is still valid"""
+    """Serve local file if still valid"""
     file_info = file_links.get(random_id)
     if not file_info:
         return "Invalid or expired link", 404
-    filepath = file_info["path"]
-    if not os.path.exists(filepath):
-        del file_links[random_id]
+    filepath = file_info.get("filepath")
+    if not filepath or not os.path.exists(filepath):
         return "File not found or expired", 404
-    try:
-        return send_file(filepath, as_attachment=True)
-    except Exception as e:
-        return f"Error downloading file: {e}", 500
+
+    return send_file(filepath, as_attachment=True)
+
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route("/ask_ai", methods=["POST"])
@@ -180,25 +177,24 @@ def ask_ai():
     except Exception as e:
         return jsonify({"answer": f"Error: {e}"})
 
-def cleanup_expired_files():
-    """Periodically remove expired files"""
+def cleanup_expired_links():
+    """Periodically remove expired links and files"""
     while True:
         now = time.time()
         expired = []
         for key, info in list(file_links.items()):
             if now - info["time"] > LINK_EXPIRY:
-                try:
-                    os.remove(info["path"])
-                except FileNotFoundError:
-                    pass
                 expired.append(key)
+                filepath = info.get("filepath")
+                if filepath and os.path.exists(filepath):
+                    os.remove(filepath)
 
         for key in expired:
             del file_links[key]
 
         time.sleep(60)
 
-threading.Thread(target=cleanup_expired_files, daemon=True).start()
+threading.Thread(target=cleanup_expired_links, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(debug=True)
