@@ -6,8 +6,8 @@ import threading
 from flask import Flask, request, send_file, render_template, jsonify, redirect, send_from_directory
 import google.generativeai as genai
 from PyPDF2 import PdfReader
-import magic
-import qrcode
+import magic 
+import qrcode 
 
 
 app = Flask(__name__)
@@ -17,7 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 LINK_EXPIRY = 15 * 60
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", ""))
+genai.configure(api_key="AIzaSyCKReLexlYplY90YkEhFM2sAg8eRP6A3SU")
 
 file_links = {}
 
@@ -61,8 +61,6 @@ def describe_file(filepath):
 
 
 
-
-
 def detect_file_type(filepath):
     """Detect potentially unsafe file types (e.g., executables)"""
     try:
@@ -73,10 +71,7 @@ def detect_file_type(filepath):
         return False
     except Exception:
         return False
-
-
-
-
+    
 @app.errorhandler(413)
 def file_too_large(e):
     return "File is too large. Max limit is 25 MB.", 413
@@ -188,6 +183,9 @@ def cleanup_expired_links():
                 filepath = info.get("filepath")
                 if filepath and os.path.exists(filepath):
                     os.remove(filepath)
+                qr_path = info.get("qr_path")
+                if qr_path and os.path.exists(qr_path):
+                    os.remove(qr_path)
 
         for key in expired:
             del file_links[key]
