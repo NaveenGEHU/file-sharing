@@ -160,12 +160,7 @@
           {% endif %}
         </div>
 
-        {% if suggested_filename %}
-        <div class="ai-section">
-          <h3>🧠 AI Suggested Filename:</h3>
-          <p><strong>{{ suggested_filename }}</strong></p>
-        </div>
-        {% endif %}
+
 
         {% if description %}
         <div class="ai-section">
@@ -179,7 +174,7 @@
           <div class="chat-box">
             <input type="text" id="userInput" placeholder="Ask something about your file...">
             <button onclick="sendQuestion()">Ask</button>
-            <div id="chatResponse" style="margin-top:10px; font-style:italic;"></div>
+            <div id="chatResponse" style="    margin-top: 10px;    text-align: left;    font-style: italic;    font-size: large;"></div>
           </div>
         </div>
 
@@ -187,7 +182,6 @@
     </div>
   </main>
   <footer>
-    <p>© 2025 FileShare AI — powered by OpenAI</p>
   </footer>
 
   <script>
@@ -195,7 +189,6 @@
       const question = document.getElementById("userInput").value.trim();
       const responseBox = document.getElementById("chatResponse");
       if (!question) return;
-
       responseBox.textContent = "Thinking...";
       try {
         const res = await fetch("/ask_ai", {
