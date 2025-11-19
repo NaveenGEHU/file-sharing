@@ -1,7 +1,0 @@
-- [x] Update imports in app.py: Remove openai, add google.generativeai
-- [x] Set up Google API key
-- [x] Modify describe_file function to use Gemini for summarization
-- [x] Modify suggest_filename function to use Gemini for text generation
-- [x] Modify ask_ai function to use Gemini for question answering
-- [x] Install google-generativeai library
-- [x] Test the app to ensure AI features work (app starts successfully on http://127.0.0.1:5000, AI features require valid GOOGLE_API_KEY)
